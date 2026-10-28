@@ -1,4 +1,5 @@
 import type {
+  AgentMessage,
   Competitor,
   Evaluation,
   Message,
@@ -7,6 +8,7 @@ import type {
   ProbeStatus,
   Scan,
   Scenario,
+  Subscription,
 } from "../types";
 
 export type New<T> = Omit<T, "id" | "createdAt">;
@@ -15,6 +17,7 @@ export interface Store {
   createOrganization(o: New<Organization>): Promise<Organization>;
   getOrganization(id: string): Promise<Organization | null>;
   getOrganizationByToken(token: string): Promise<Organization | null>;
+  getOrganizationByWaPhone(phoneNumberId: string): Promise<Organization | null>;
   updateOrganization(id: string, patch: Partial<Organization>): Promise<Organization>;
   listOrganizations(): Promise<Organization[]>;
 
@@ -44,4 +47,10 @@ export interface Store {
 
   saveEvaluation(e: New<Evaluation>): Promise<Evaluation>;
   getEvaluation(probeId: string): Promise<Evaluation | null>;
+
+  addAgentMessage(m: Omit<AgentMessage, "id">): Promise<AgentMessage>;
+  /** Newest last, at most `limit` messages. */
+  listAgentMessages(organizationId: string, customer: string | null, limit: number): Promise<AgentMessage[]>;
+
+  saveSubscription(s: New<Subscription>): Promise<Subscription>;
 }

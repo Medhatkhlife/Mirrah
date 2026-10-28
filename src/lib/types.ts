@@ -43,6 +43,12 @@ export interface Organization {
   plan: Plan;
   /** Secret for the owner's private dashboard link (/app/<token>). Never shown on shared reports. */
   accessToken: string;
+  /** Reply agent (full plan): what it may answer from, when it runs, which WhatsApp number. */
+  knowledgeBase: string;
+  agentEnabled: boolean;
+  /** "always", or "HH-HH" in Asia/Hebron time, e.g. "17-9" = from 17:00 until 09:00. */
+  agentHours: string;
+  waPhoneNumberId: string | null;
   createdAt: string;
 }
 
@@ -132,5 +138,25 @@ export interface Evaluation {
   suggestion: string;
   score: number; // 0..100 weighted
   model: string;
+  createdAt: string;
+}
+
+export interface AgentMessage {
+  id: string;
+  organizationId: string;
+  customer: string; // WhatsApp id or "playground"
+  sender: "customer" | "agent";
+  body: string;
+  handoff: boolean;
+  sentAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  organizationId: string;
+  plan: Plan;
+  status: string;
+  provider: string;
+  providerRef: string | null;
   createdAt: string;
 }

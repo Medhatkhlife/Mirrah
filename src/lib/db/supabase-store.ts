@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { New, Store } from "./types";
 import type {
+  AgentMessage,
   Competitor,
   Evaluation,
   Message,
@@ -9,6 +10,7 @@ import type {
   ProbeStatus,
   Scan,
   Scenario,
+  Subscription,
 } from "../types";
 
 const snake = (k: string) => k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
@@ -67,6 +69,10 @@ export class SupabaseStore implements Store {
   getOrganization = (id: string) => this.byId<Organization>("organizations", id);
   getOrganizationByToken = (token: string) =>
     this.maybe<Organization>(this.db.from("organizations").select().eq("access_token", token).maybeSingle());
+  getOrganizationByWaPhone = (phoneNumberId: string) =>
+    this.maybe<Organization>(
+      this.db.from("organizations").select().eq("wa_phone_number_id", phoneNumberId).maybeSingle(),
+    );
   updateOrganization = (id: string, p: Partial<Organization>) => this.upd<Organization>("organizations", id, p);
   listOrganizations = () =>
     this.many<Organization>(
@@ -117,4 +123,14 @@ export class SupabaseStore implements Store {
   saveEvaluation = (e: New<Evaluation>) => this.ins<Evaluation>("evaluations", e);
   getEvaluation = (probeId: string) =>
     this.maybe<Evaluation>(this.db.from("evaluations").select().eq("probe_id", probeId).maybeSingle());
+
+  addAgentMessage = (m: Omit<AgentMessage, "id">) => this.ins<AgentMessage>("agent_messages", m);
+  listAgentMessages = async (organizationId: string, customer: string | null, limit: number) => {
+    let q = this.db.from("agent_messages").select().eq("organization_id", organizationId);
+    if (customer !== null) q = q.eq("customer", customer);
+    const rows = await this.many<AgentMessage>(q.order("sent_at", { ascending: false }).limit(limit));
+    return rows.reverse();
+  };
+
+  saveSubscription = (s: New<Subscription>) => this.ins<Subscription>("subscriptions", s);
 }

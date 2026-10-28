@@ -3,6 +3,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import type { New, Store } from "./types";
 import type {
+  AgentMessage,
   Competitor,
   Evaluation,
   Message,
@@ -11,6 +12,7 @@ import type {
   ProbeStatus,
   Scan,
   Scenario,
+  Subscription,
 } from "../types";
 
 interface Tables {
@@ -21,6 +23,8 @@ interface Tables {
   probes: Probe[];
   messages: Message[];
   evaluations: Evaluation[];
+  agentMessages: AgentMessage[];
+  subscriptions: Subscription[];
 }
 
 const empty = (): Tables => ({
@@ -31,6 +35,8 @@ const empty = (): Tables => ({
   probes: [],
   messages: [],
   evaluations: [],
+  agentMessages: [],
+  subscriptions: [],
 });
 
 /**
@@ -101,6 +107,8 @@ export class MemoryStore implements Store {
     this.run((t) => t.organizations.find((r) => r.id === id) ?? null);
   getOrganizationByToken = (token: string) =>
     this.run((t) => t.organizations.find((r) => r.accessToken === token) ?? null);
+  getOrganizationByWaPhone = (phoneNumberId: string) =>
+    this.run((t) => t.organizations.find((r) => r.waPhoneNumberId === phoneNumberId) ?? null);
   updateOrganization = (id: string, p: Partial<Organization>) => this.patch("organizations", id, p);
   listOrganizations = () => this.run((t) => [...t.organizations].reverse());
 
@@ -158,4 +166,16 @@ export class MemoryStore implements Store {
     this.insert("evaluations", { ...e, createdAt: this.now() });
   getEvaluation = (probeId: string) =>
     this.run((t) => t.evaluations.find((r) => r.probeId === probeId) ?? null);
+
+  addAgentMessage = (m: Omit<AgentMessage, "id">) => this.insert("agentMessages", m);
+  listAgentMessages = (organizationId: string, customer: string | null, limit: number) =>
+    this.run((t) =>
+      t.agentMessages
+        .filter((r) => r.organizationId === organizationId && (customer === null || r.customer === customer))
+        .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
+        .slice(-limit),
+    );
+
+  saveSubscription = (s: New<Subscription>) =>
+    this.insert("subscriptions", { ...s, createdAt: this.now() });
 }

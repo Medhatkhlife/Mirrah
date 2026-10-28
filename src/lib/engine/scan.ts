@@ -67,6 +67,10 @@ export async function startFreeScan(
     ownerEmail: req.ownerEmail.trim(),
     plan: "free",
     accessToken: newToken(18),
+    knowledgeBase: "",
+    agentEnabled: false,
+    agentHours: "17-9",
+    waPhoneNumberId: null,
   });
   const { scan, probes } = await createScan(store, organization, { kind: "free" }, opts);
   return { organization, scan, probes };

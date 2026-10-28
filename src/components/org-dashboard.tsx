@@ -3,6 +3,7 @@ import { Bubble, Card, Tag, btnPrimary, btnSecondary, fmtDate, input } from "@/c
 import type { Store } from "@/lib/db/types";
 import { loadScanReport } from "@/lib/engine/scan";
 import { MAX_COMPETITORS, isPaid } from "@/lib/engine/schedule";
+import { PAID_PLANS, billingEnabled, checkoutUrl } from "@/lib/billing";
 import { formatMinutes } from "@/lib/scoring";
 import { CHANNEL_LABELS, PLAN_LABELS, SECTOR_LABELS, type Channel, type Organization } from "@/lib/types";
 
@@ -159,9 +160,34 @@ export async function OrgDashboard({
         </Card>
       )}
 
-      {!isPaid(org) && (
-        <Link href="/#pricing" className={btnPrimary}>فعّل المراقبة الأسبوعية</Link>
-      )}
+      <Card className="flex flex-col gap-4">
+        <h2 className="text-lg font-bold">خطتك: {PLAN_LABELS[org.plan]}</h2>
+        {billingEnabled() ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {PAID_PLANS.map((plan) => {
+              const href = checkoutUrl(plan, org);
+              const current = org.plan === plan;
+              return (
+                <div key={plan} className={`flex flex-col gap-2 rounded-xl border p-4 ${current ? "border-accent" : "border-line"}`}>
+                  <span className="font-semibold">{PLAN_LABELS[plan]}</span>
+                  {current ? (
+                    <Tag tone="good">خطتك الحالية</Tag>
+                  ) : href ? (
+                    <a href={href} className={plan === "pulse_coach" ? btnPrimary : btnSecondary}>اشترك</a>
+                  ) : (
+                    <span className="text-sm text-muted">غير متاحة حالياً</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm leading-7 text-muted">
+            الاشتراك الإلكتروني لم يُفعّل بعد. للترقية تواصل معنا وسنفعّل خطتك يدوياً.{" "}
+            <Link href="/#pricing" className="text-accent underline">قارن الخطط</Link>
+          </p>
+        )}
+      </Card>
     </div>
   );
 }
