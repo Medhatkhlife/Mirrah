@@ -29,7 +29,7 @@ export function ScanForm() {
       <Field label="بريدك لاستلام التقرير" name="ownerEmail" type="email" required dir="ltr" />
       <label className="flex items-start gap-2.5 text-sm leading-6">
         <input type="checkbox" name="consent" required className="mt-1 size-5 accent-[var(--color-accent)]" />
-        <span>أنا صاحب هذه الشركة أو مفوّض عنها، وأوافق على أن تتواصل معها مِرآة كزبون لغرض هذا الفحص.</span>
+        <span>أنا صاحب هذه الشركة أو مفوّض عنها، وأوافق على أن تتواصل معها مِرآة كزبون لغرض هذا الفحص، وعلى <a href="/terms" className="text-accent underline">الشروط</a> و<a href="/privacy" className="text-accent underline">الخصوصية</a>.</span>
       </label>
       {state.error && <p role="alert" className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">{state.error}</p>}
       <button className={btnPrimary} disabled={pending}>{pending ? "نجهّز الزبون السري…" : "ابدأ الفحص المجاني"}</button>

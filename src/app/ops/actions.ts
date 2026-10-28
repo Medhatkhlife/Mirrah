@@ -43,7 +43,11 @@ export async function submitReply(form: FormData) {
   const minutesAgo = Math.max(0, Number(form.get("minutesAgo") ?? 0) || 0);
   const store = getStore();
   const before = await store.getProbe(probeId);
-  await recordBusinessReply(store, probeId, body, new Date(Date.now() - minutesAgo * 60_000));
+  try {
+    await recordBusinessReply(store, probeId, body, new Date(Date.now() - minutesAgo * 60_000));
+  } catch (e) {
+    redirect(`/ops?error=${encodeURIComponent(e instanceof Error ? e.message : "تعذر تسجيل الرد")}`);
+  }
   if (before) await emit(EVENTS.probeReplied, { probeId, round: before.round });
   await autoSendDraft(store, probeId);
   revalidatePath("/ops");

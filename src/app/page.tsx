@@ -5,7 +5,7 @@ import { ScanForm } from "./scan-form";
 const steps = [
   { n: "1 · نختبر", t: "زبون سري بلهجة سوقك", d: "يكتب Claude سيناريو زبون يناسب قطاعك، ثم يتواصل معك في أوقات مختلفة عبر قنواتك." },
   { n: "2 · نقيس", t: "درجة من 100 مع الدليل", d: "السرعة، إجابة السؤال، محاولة إتمام البيع، المتابعة واللباقة، ولكل درجة اقتباس من المحادثة." },
-  { n: "3 · نُصلح", t: "اقتراحات ووكيل رد", d: "اقتراح محدد بعد كل محادثة، ووكيل ذكي يرد خارج الدوام (قريباً)." },
+  { n: "3 · نُصلح", t: "مدرّب ووكيل رد", d: "اقتراح محدد بعد كل محادثة، وتدريب لفريقك، ووكيل ذكي يرد على واتساب خارج الدوام." },
 ];
 
 const plans = [
@@ -82,7 +82,7 @@ export default function Home() {
       <section id="pricing" className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-16">
         <div>
           <h2 className="text-3xl font-bold">ابدأ مجاناً، وادفع حين ترى الفرق</h2>
-          <p className="mt-2 text-[#4A5060]">الأسعار بالدولار شهرياً لكل فرع. الاشتراكات تُفتح بعد الإطلاق التجريبي.</p>
+          <p className="mt-2 text-[#4A5060]">الأسعار بالدولار شهرياً لكل فرع. ابدأ بالفحص المجاني، والترقية من لوحتك.</p>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
           {plans.map((p) => (
@@ -102,7 +102,7 @@ export default function Home() {
 
       <footer className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 px-6 py-7 text-sm text-muted">
         <span>مِرآة</span>
-        <span>الخصوصية · الشروط · تواصل معنا</span>
+        <nav aria-label="روابط قانونية" className="flex gap-4"><Link href="/privacy" className="text-muted">الخصوصية</Link><Link href="/terms" className="text-muted">الشروط</Link></nav>
       </footer>
     </div>
   );

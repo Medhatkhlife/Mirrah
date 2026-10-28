@@ -106,6 +106,16 @@ describe("scan engine (mock AI)", () => {
     expect(msgs.filter((m) => m.status === "sent").length).toBe(4);
   });
 
+  it("rejects a reply timestamped before the customer's message", async () => {
+    const store = new MemoryStore();
+    const { probes } = await startFreeScan(store, req, { siteText: "" });
+    const id = probes[0].id;
+    await launchProbe(store, id);
+    await markDraftSent(store, id, at("2026-10-28T19:00:00Z"));
+    await expect(recordBusinessReply(store, id, "أهلاً", new Date("2026-10-28T18:30:00Z"))).rejects.toThrow(/قبل/);
+    expect((await store.listMessages(id)).filter((m) => m.sender === "business")).toHaveLength(0);
+  });
+
   it("rejects replies for probes that are not waiting", async () => {
     const store = new MemoryStore();
     const { probes } = await startFreeScan(store, req, { siteText: "" });

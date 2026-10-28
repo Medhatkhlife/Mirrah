@@ -4,6 +4,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bubble, Card, Logo, Tag, btnPrimary, btnSecondary, fmtDate, input } from "@/components/ui";
 import { aiMode, dbMode } from "@/lib/config";
+import { billingEnabled } from "@/lib/billing";
+import { emailEnabled, probeEmailEnabled } from "@/lib/email";
+import { waConfig } from "@/lib/engine/agent";
+import { inngestEnabled } from "@/lib/engine/events";
 import { getStore } from "@/lib/db";
 import { isOperator } from "@/lib/ops-auth";
 import { formatMinutes } from "@/lib/scoring";
@@ -16,8 +20,9 @@ function contactFor(o: Organization, p: Probe) {
   return o.website;
 }
 
-async function OpsPageContent() {
+async function OpsPageContent({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await connection();
+  const { error } = await searchParams;
   if (!(await isOperator())) redirect("/ops/login");
   const store = getStore();
   const open = await store.listProbesByStatus(["awaiting_send", "awaiting_reply"]);
@@ -39,9 +44,14 @@ async function OpsPageContent() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Tag tone={aiMode() === "live" ? "good" : "neutral"}>Claude: {aiMode() === "live" ? "متصل" : "وضع تجريبي"}</Tag>
           <Tag tone={dbMode() === "supabase" ? "good" : "neutral"}>البيانات: {dbMode() === "supabase" ? "Supabase" : "ملف محلي"}</Tag>
+          <Tag tone={inngestEnabled() ? "good" : "neutral"}>الجدولة: {inngestEnabled() ? "Inngest" : "فورية"}</Tag>
+          <Tag tone={emailEnabled() ? "good" : "neutral"}>البريد: {emailEnabled() ? (probeEmailEnabled() ? "كامل" : "للمالكين فقط") : "غير مفعّل"}</Tag>
+          <Tag tone={billingEnabled() ? "good" : "neutral"}>الدفع: {billingEnabled() ? "مفعّل" : "يدوي"}</Tag>
+          <Tag tone={waConfig.token ? "good" : "neutral"}>وكيل واتساب: {waConfig.token ? "مفعّل" : "غير مفعّل"}</Tag>
         </div>
       </header>
 
+      {error && <p role="alert" className="mb-4 rounded-xl bg-warn-soft p-3 text-warn">{error}</p>}
       <h1 className="text-2xl font-bold">لوحة المشغّل</h1>
       <p className="mt-1 mb-6 text-muted">
         أرسل رسالة الزبون السري من الجوال المخصص، ثم أكّد الإرسال، والصق رد الشركة هنا حين يصل.
@@ -70,6 +80,7 @@ async function OpsPageContent() {
                   {probe.status === "awaiting_send" ? <Tag tone="accent">بانتظار الإرسال</Tag> : <Tag tone="warn">بانتظار رد الشركة</Tag>}
                   {probe.firstResponseMinutes !== null && <Tag tone="neutral">أول رد: {formatMinutes(probe.firstResponseMinutes)}</Tag>}
                   <Link href={`/r/${scan.reportToken}`} className="text-sm text-accent underline">التقرير</Link>
+                  <Link href={`/dashboard?org=${org.id}`} className="text-sm text-accent underline">الشركة</Link>
                 </div>
               </div>
 
@@ -103,7 +114,7 @@ async function OpsPageContent() {
                   </label>
                   <div className="flex flex-wrap gap-2">
                     <button className={btnPrimary}>سجّل الرد</button>
-                    <button formAction={closeProbe} className={btnSecondary}>أغلق بلا رد</button>
+                    <button formAction={closeProbe} formNoValidate className={btnSecondary}>أغلق بلا رد</button>
                   </div>
                 </form>
               )}
@@ -115,10 +126,10 @@ async function OpsPageContent() {
   );
 }
 
-export default function OpsPage() {
+export default function OpsPage(props: PageProps<"/ops">) {
   return (
     <Suspense fallback={<div className="p-8 text-muted">جارٍ التحميل…</div>}>
-      <OpsPageContent />
+      <OpsPageContent searchParams={props.searchParams as Promise<{ error?: string }>} />
     </Suspense>
   );
 }

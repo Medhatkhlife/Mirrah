@@ -50,7 +50,9 @@ export class MemoryStore implements Store {
   constructor(private file: string | null = null) {}
 
   private async load(): Promise<Tables> {
-    if (this.data) return this.data;
+    // A file-backed store re-reads on every operation: Next.js may serve pages and actions from
+    // different processes, and a per-process cache would let them overwrite each other.
+    if (this.data && !this.file) return this.data;
     if (this.file) {
       try {
         this.data = { ...empty(), ...JSON.parse(await fs.readFile(this.file, "utf8")) };

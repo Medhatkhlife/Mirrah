@@ -169,6 +169,10 @@ export async function recordBusinessReply(
   const before = await store.listMessages(probeId);
   const firstCustomer = before.find((m) => m.sender === "customer" && m.status === "sent");
   const hadReply = before.some((m) => m.sender === "business");
+  // A reply cannot precede the message it answers; that would fake a fast response time.
+  const lastSent = before.filter((m) => m.status === "sent").at(-1);
+  if (lastSent && receivedAt.getTime() < new Date(lastSent.sentAt).getTime())
+    throw new Error("وقت الرد قبل وقت إرسال رسالة الزبون. تحقق من عدد الدقائق.");
   await store.addMessage({
     probeId,
     sender: "business",
