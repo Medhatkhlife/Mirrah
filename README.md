@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# مِرآة
 
-## Getting Started
+منصة "زبون سري" بالذكاء الاصطناعي: تتواصل مع الشركة كزبون حقيقي، وتقيس ردها، وتعطي صاحبها تقريراً بالدرجة والدليل.
 
-First, run the development server:
+## ما الذي يعمل الآن (المرحلة 1 و2)
+
+| الجزء | الحالة |
+| --- | --- |
+| الصفحة الرئيسية وطلب الفحص المجاني | يعمل (`/`) |
+| محرك الفحص: سيناريو، رسائل الزبون، تسجيل الردود، التقييم، الدرجة | يعمل، مع اختبارات |
+| عقول Claude الخمسة (سيناريو، زبون، مقيّم، مدرّب، وكيل رد) | مكتوبة؛ تعمل فعلياً عند إضافة مفتاح API، وبوضع تجريبي بدونه |
+| لوحة المشغّل لواتساب اليدوي | تعمل (`/ops`) |
+| صفحة التقرير الخاصة | تعمل (`/r/<رمز>`) |
+| لوحة التحكم | تعمل للمشغّل فقط (`/dashboard`)؛ حسابات العملاء في المرحلة 3 |
+| قاعدة بيانات Supabase مع RLS | ملف migration جاهز |
+| الجدولة والانتظار 48 ساعة (Inngest) | مكتوبة؛ تعمل عند ضبط Inngest |
+| إرسال البريد ونموذج الموقع آلياً | لم يُبنَ بعد؛ حالياً عبر لوحة المشغّل |
+| الدفع، حسابات العملاء، المنافسون، وكيل الرد على واتساب | المراحل 3 و4 |
+
+## التشغيل محلياً (بدون أي حسابات)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run demo     # يملأ بيانات تجريبية
+npm run dev      # افتح http://localhost:3000
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+بدون متغيرات بيئة يعمل كل شيء بوضع تجريبي: بيانات في `.data/db.json` وردود Claude محاكاة.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## التشغيل الحقيقي
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. انسخ `.env.example` إلى `.env.local` واملأ القيم.
+2. أنشئ مشروع Supabase وشغّل `supabase/migrations/0001_init.sql` في محرر SQL.
+3. ضع `ANTHROPIC_API_KEY` من console.anthropic.com وحدد حداً للإنفاق.
+4. ضع `OPS_PASSWORD` (إلزامي في الإنتاج، وإلا تُقفل لوحة المشغّل).
+5. اربط Inngest (`INNGEST_EVENT_KEY` و`INNGEST_SIGNING_KEY`) ليعمل الانتظار والجدولة.
+6. انشر على Vercel وأضف نفس المتغيرات هناك.
 
-## Learn More
+## قاعدة واتساب
 
-To learn more about Next.js, take a look at the following resources:
+لا تؤتمت تطبيق واتساب العادي: هذا مخالف لشروطه. رسائل الزبون السري على واتساب يرسلها إنسان من جوال مخصص، وClaude يكتبها ويقيّم الردود عبر `/ops`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## البنية
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/lib/engine/scan.ts` منطق الفحص كاملاً (دوال مستقلة قابلة للاختبار)
+- `src/lib/ai/` كل استدعاءات Claude، والبرومبتات في `prompts.ts`
+- `src/lib/scoring.ts` معايير التقييم وأوزانها
+- `src/lib/db/` طبقة البيانات (ملف محلي أو Supabase)
+- `CLAUDE.md` تعليمات المشروع لـ Claude Code

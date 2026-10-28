@@ -42,3 +42,4 @@ next-env.d.ts
 
 # demo data store
 /.data
+!.env.example
