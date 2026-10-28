@@ -7,7 +7,7 @@ import { Card, Logo, btnSecondary, input } from "@/components/ui";
 import { getStore } from "@/lib/db";
 import { isOperator } from "@/lib/ops-auth";
 import { PLAN_LABELS } from "@/lib/types";
-import { opAddCompetitor, opRemoveCompetitor, runCycleNow, setPlan } from "../ops/actions";
+import { opAddCompetitor, opCoach, opRemoveCompetitor, opSaveAgent, opTryAgent, runCycleNow, setPlan } from "../ops/actions";
 
 /** Operator view of any organization's dashboard, plus plan control. */
 async function DashboardContent({ searchParams }: PageProps<"/dashboard">) {
@@ -65,6 +65,9 @@ async function DashboardContent({ searchParams }: PageProps<"/dashboard">) {
               actions={{
                 addCompetitor: opAddCompetitor.bind(null, org.id),
                 removeCompetitor: opRemoveCompetitor.bind(null, org.id),
+                saveAgent: opSaveAgent.bind(null, org.id),
+                tryAgent: opTryAgent.bind(null, org.id),
+                coach: opCoach.bind(null, org.id),
               }}
             />
           </>

@@ -5,7 +5,16 @@ import { redirect } from "next/navigation";
 import { getStore } from "@/lib/db";
 import { EVENTS, emit, kickOff } from "@/lib/engine/inngest";
 import { autoSendDraft } from "@/lib/engine/dispatch";
-import { addCompetitor, removeCompetitor, runRecurringCycle } from "@/lib/engine/schedule";
+import { runRecurringCycle } from "@/lib/engine/schedule";
+import {
+  doAddCompetitor,
+  doCoach,
+  doRemoveCompetitor,
+  doSaveAgent,
+  doTryAgent,
+  type CoachState,
+  type PlaygroundState,
+} from "@/lib/dashboard-actions";
 import { PLAN_LABELS, type Plan } from "@/lib/types";
 import { closeWithoutReply, markDraftSent, recordBusinessReply } from "@/lib/engine/scan";
 import { isOperator, loginOperator } from "@/lib/ops-auth";
@@ -54,22 +63,34 @@ export async function setPlan(form: FormData) {
   revalidatePath("/dashboard");
 }
 
-export async function opAddCompetitor(organizationId: string, form: FormData) {
+async function opOrg(organizationId: string) {
   await guard();
-  const clean = (v: FormDataEntryValue | null) => String(v ?? "").trim() || null;
-  await addCompetitor(getStore(), organizationId, {
-    name: String(form.get("name") ?? ""),
-    website: clean(form.get("website")),
-    whatsapp: clean(form.get("whatsapp")),
-    email: clean(form.get("email")),
-  });
+  const org = await getStore().getOrganization(organizationId);
+  if (!org) throw new Error("الشركة غير موجودة");
+  return org;
+}
+
+export async function opAddCompetitor(organizationId: string, form: FormData) {
+  await doAddCompetitor(await opOrg(organizationId), form);
   revalidatePath("/dashboard");
 }
 
 export async function opRemoveCompetitor(organizationId: string, form: FormData) {
-  await guard();
-  await removeCompetitor(getStore(), organizationId, String(form.get("competitorId")));
+  await doRemoveCompetitor(await opOrg(organizationId), form);
   revalidatePath("/dashboard");
+}
+
+export async function opSaveAgent(organizationId: string, form: FormData) {
+  await doSaveAgent(await opOrg(organizationId), form);
+  revalidatePath("/dashboard");
+}
+
+export async function opTryAgent(organizationId: string, _: PlaygroundState, form: FormData): Promise<PlaygroundState> {
+  return doTryAgent(await opOrg(organizationId), form);
+}
+
+export async function opCoach(organizationId: string, _: CoachState): Promise<CoachState> {
+  return doCoach(await opOrg(organizationId));
 }
 
 /** Run the daily recurring pass now (useful in demo mode, where there is no cron). */

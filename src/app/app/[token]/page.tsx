@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { OrgDashboard } from "@/components/org-dashboard";
 import { Card, Logo } from "@/components/ui";
 import { getStore } from "@/lib/db";
-import { ownerAddCompetitor, ownerRemoveCompetitor } from "./actions";
+import { ownerAddCompetitor, ownerCoach, ownerRemoveCompetitor, ownerSaveAgent, ownerTryAgent } from "./actions";
 
 export async function generateMetadata() {
   return { title: "لوحتك — مِرآة", robots: { index: false, follow: false } };
@@ -25,6 +25,9 @@ async function OwnerDashboard({ params, searchParams }: PageProps<"/app/[token]"
       actions={{
         addCompetitor: ownerAddCompetitor.bind(null, token),
         removeCompetitor: ownerRemoveCompetitor.bind(null, token),
+        saveAgent: ownerSaveAgent.bind(null, token),
+        tryAgent: ownerTryAgent.bind(null, token),
+        coach: ownerCoach.bind(null, token),
       }}
       notice={
         isNew ? (

@@ -5,12 +5,19 @@ import { loadScanReport } from "@/lib/engine/scan";
 import { MAX_COMPETITORS, isPaid } from "@/lib/engine/schedule";
 import { PAID_PLANS, billingEnabled, checkoutUrl } from "@/lib/billing";
 import { formatMinutes } from "@/lib/scoring";
+import { agentAllowed } from "@/lib/engine/agent";
+import { coachAllowed } from "@/lib/engine/coach";
+import type { CoachState, PlaygroundState } from "@/lib/dashboard-actions";
+import { AgentPlayground, CoachPanel } from "./agent-client";
 import { CHANNEL_LABELS, PLAN_LABELS, SECTOR_LABELS, type Channel, type Organization } from "@/lib/types";
 
 /** Server actions bound to the viewer (owner token or operator). */
 export interface DashboardActions {
   addCompetitor: (form: FormData) => Promise<void>;
   removeCompetitor: (form: FormData) => Promise<void>;
+  saveAgent: (form: FormData) => Promise<void>;
+  tryAgent: (s: PlaygroundState, form: FormData) => Promise<PlaygroundState>;
+  coach: (s: CoachState) => Promise<CoachState>;
 }
 
 /** The organization dashboard, shared by the owner's private link and the operator view. */
@@ -32,6 +39,8 @@ export async function OrgDashboard({
   const first = completed.at(-1) ?? null;
   const report = latest ? await loadScanReport(store, latest) : null;
   const competitors = await store.listCompetitors(org.id);
+  const agentLog = agentAllowed(org) ? await store.listAgentMessages(org.id, null, 30) : [];
+  const realAgentLog = agentLog.filter((m) => m.customer !== "playground");
 
   const byChannel = new Map<Channel, { minutes: (number | null)[]; scores: number[] }>();
   for (const p of report?.probes ?? []) {
@@ -159,6 +168,67 @@ export async function OrgDashboard({
           )}
         </Card>
       )}
+
+      <Card className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">المدرّب</h2>
+        {coachAllowed(org) ? (
+          <>
+            <p className="text-sm leading-7 text-muted">يقرأ Claude آخر محادثات الزبون السري ويستخرج الأخطاء المتكررة وتمريناً لفريقك.</p>
+            <CoachPanel action={actions.coach} />
+          </>
+        ) : (
+          <p className="text-sm leading-7 text-muted">متاح في خطة النبض + المدرّب وما فوق.</p>
+        )}
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold">وكيل الرد</h2>
+          {agentAllowed(org) && <Tag tone={org.agentEnabled ? "good" : "neutral"}>{org.agentEnabled ? "يعمل" : "متوقف"}</Tag>}
+        </div>
+        {!agentAllowed(org) ? (
+          <p className="text-sm leading-7 text-muted">متاح في النظام الكامل: وكيل Claude يرد على زبائنك في واتساب خارج الدوام، ويحوّل الجاهزين للشراء إلى فريقك.</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <form action={actions.saveAgent} className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold">ما يعرفه الوكيل عن شركتك</span>
+                <textarea name="knowledgeBase" rows={8} defaultValue={org.knowledgeBase ?? ""} placeholder="الأسعار، المنتجات، أوقات الدوام، العنوان، الأسئلة الشائعة…" className={`${input} py-3 leading-7`} />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold">ساعات العمل (توقيت فلسطين)</span>
+                <input name="agentHours" defaultValue={org.agentHours ?? "17-9"} dir="ltr" className={input} />
+                <span className="text-xs text-muted">مثال: 17-9 من 5 مساءً حتى 9 صباحاً، أو always لكل الوقت</span>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold">معرّف رقم واتساب (Phone number ID)</span>
+                <input name="waPhoneNumberId" defaultValue={org.waPhoneNumberId ?? ""} dir="ltr" className={input} />
+                <span className="text-xs text-muted">من إعدادات WhatsApp Cloud API لرقم شركتك. نساعدك في الربط.</span>
+              </label>
+              <label className="flex items-center gap-2.5">
+                <input type="checkbox" name="agentEnabled" defaultChecked={org.agentEnabled} className="size-5 accent-[var(--color-accent)]" />
+                <span>شغّل الوكيل</span>
+              </label>
+              <button className={btnSecondary}>حفظ الإعدادات</button>
+            </form>
+            <div className="flex flex-col gap-4">
+              <AgentPlayground action={actions.tryAgent} />
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold">آخر رسائل الوكيل مع الزبائن ({realAgentLog.length})</span>
+                {realAgentLog.length === 0 ? (
+                  <p className="text-sm text-muted">لا توجد محادثات حقيقية بعد.</p>
+                ) : (
+                  <div className="flex max-h-80 flex-col gap-2 overflow-y-auto rounded-xl bg-ground p-3">
+                    {realAgentLog.map((m) => (
+                      <Bubble key={m.id} from={m.sender === "customer" ? "customer" : "business"} meta={`${m.customer} · ${fmtDate(m.sentAt)}${m.handoff ? " · حُوّلت لموظف" : ""}`}>{m.body}</Bubble>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="flex flex-col gap-4">
         <h2 className="text-lg font-bold">خطتك: {PLAN_LABELS[org.plan]}</h2>

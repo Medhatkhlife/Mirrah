@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { getStore } from "@/lib/db";
-import { addCompetitor, removeCompetitor } from "@/lib/engine/schedule";
-
-const clean = (v: FormDataEntryValue | null) => {
-  const s = String(v ?? "").trim();
-  return s ? s : null;
-};
+import {
+  doAddCompetitor,
+  doCoach,
+  doRemoveCompetitor,
+  doSaveAgent,
+  doTryAgent,
+  type CoachState,
+  type PlaygroundState,
+} from "@/lib/dashboard-actions";
 
 /** Resolve the organization from the secret link token. Throws when the token is unknown. */
 async function orgFor(token: string) {
@@ -17,18 +20,24 @@ async function orgFor(token: string) {
 }
 
 export async function ownerAddCompetitor(token: string, form: FormData) {
-  const org = await orgFor(token);
-  await addCompetitor(getStore(), org.id, {
-    name: String(form.get("name") ?? ""),
-    website: clean(form.get("website")),
-    whatsapp: clean(form.get("whatsapp")),
-    email: clean(form.get("email")),
-  });
+  await doAddCompetitor(await orgFor(token), form);
   revalidatePath(`/app/${token}`);
 }
 
 export async function ownerRemoveCompetitor(token: string, form: FormData) {
-  const org = await orgFor(token);
-  await removeCompetitor(getStore(), org.id, String(form.get("competitorId")));
+  await doRemoveCompetitor(await orgFor(token), form);
   revalidatePath(`/app/${token}`);
+}
+
+export async function ownerSaveAgent(token: string, form: FormData) {
+  await doSaveAgent(await orgFor(token), form);
+  revalidatePath(`/app/${token}`);
+}
+
+export async function ownerTryAgent(token: string, _: PlaygroundState, form: FormData): Promise<PlaygroundState> {
+  return doTryAgent(await orgFor(token), form);
+}
+
+export async function ownerCoach(token: string, _: CoachState): Promise<CoachState> {
+  return doCoach(await orgFor(token));
 }
