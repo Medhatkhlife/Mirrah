@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { aiMode, dbMode } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "مِرآة — اعرف كيف يراك زبائنك",
@@ -18,7 +19,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
         />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {(dbMode() === "demo" || aiMode() === "mock") && (
+          <div role="note" className="bg-ink px-4 py-1.5 text-center text-xs text-white">
+            نسخة تجريبية: البيانات مؤقتة{aiMode() === "mock" ? " وردود Claude محاكاة" : ""}
+          </div>
+        )}
+        {children}
+      </body>
     </html>
   );
 }
