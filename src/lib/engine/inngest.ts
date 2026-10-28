@@ -1,6 +1,9 @@
 import { Inngest } from "inngest";
 import { getStore } from "../db";
 import { closeWithoutReply, launchProbe } from "./scan";
+import { runRecurringCycle } from "./schedule";
+import type { Store } from "../db/types";
+import type { Probe, Scan } from "../types";
 import { config } from "../config";
 
 export const inngest = new Inngest({ id: "mirrah" });
@@ -19,6 +22,15 @@ export const EVENTS = {
 export async function emit(name: string, data: Record<string, unknown>) {
   if (!inngestEnabled()) return;
   await inngest.send({ name, data });
+}
+
+/**
+ * Hand a newly created scan to the scheduler. With Inngest, probes wake at their scheduled time;
+ * in demo mode every opening message is drafted right away for the operator.
+ */
+export async function kickOff(store: Store, scan: Scan, probes: Probe[]) {
+  if (inngestEnabled()) await emit(EVENTS.scanStarted, { scanId: scan.id });
+  else for (const p of probes) await launchProbe(store, p.id);
 }
 
 /** Wake each probe at its scheduled time and draft its opening message. */
@@ -61,4 +73,17 @@ export const watchProbe = inngest.createFunction(
   },
 );
 
-export const functions = [scheduleProbes, watchProbe];
+/** Daily pass that starts due weekly scans and monthly competitor inquiries. */
+export const recurringScans = inngest.createFunction(
+  { id: "recurring-scans", triggers: [{ cron: "TZ=Asia/Hebron 0 9 * * *" }] },
+  async ({ step }) => {
+    const result = await step.run("run-cycle", async () => {
+      const { started, failures } = await runRecurringCycle(getStore(), new Date());
+      for (const s of started) await emit(EVENTS.scanStarted, { scanId: s.scan.id });
+      return { started: started.length, failures };
+    });
+    return result;
+  },
+);
+
+export const functions = [scheduleProbes, watchProbe, recurringScans];

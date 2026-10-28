@@ -99,11 +99,19 @@ export class MemoryStore implements Store {
     this.insert("organizations", { ...o, createdAt: this.now() });
   getOrganization = (id: string) =>
     this.run((t) => t.organizations.find((r) => r.id === id) ?? null);
+  getOrganizationByToken = (token: string) =>
+    this.run((t) => t.organizations.find((r) => r.accessToken === token) ?? null);
+  updateOrganization = (id: string, p: Partial<Organization>) => this.patch("organizations", id, p);
   listOrganizations = () => this.run((t) => [...t.organizations].reverse());
 
   createCompetitor = (c: Omit<Competitor, "id">) => this.insert("competitors", c);
   listCompetitors = (organizationId: string) =>
     this.run((t) => t.competitors.filter((r) => r.organizationId === organizationId));
+  getCompetitor = (id: string) => this.run((t) => t.competitors.find((r) => r.id === id) ?? null);
+  deleteCompetitor = (id: string) =>
+    this.run((t) => {
+      t.competitors = t.competitors.filter((r) => r.id !== id);
+    }, true);
 
   createScenario = (s: New<Scenario>) =>
     this.insert("scenarios", { ...s, createdAt: this.now() });

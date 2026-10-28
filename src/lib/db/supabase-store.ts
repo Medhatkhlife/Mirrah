@@ -65,6 +65,9 @@ export class SupabaseStore implements Store {
 
   createOrganization = (o: New<Organization>) => this.ins<Organization>("organizations", o);
   getOrganization = (id: string) => this.byId<Organization>("organizations", id);
+  getOrganizationByToken = (token: string) =>
+    this.maybe<Organization>(this.db.from("organizations").select().eq("access_token", token).maybeSingle());
+  updateOrganization = (id: string, p: Partial<Organization>) => this.upd<Organization>("organizations", id, p);
   listOrganizations = () =>
     this.many<Organization>(
       this.db.from("organizations").select().order("created_at", { ascending: false }),
@@ -73,6 +76,11 @@ export class SupabaseStore implements Store {
   createCompetitor = (c: Omit<Competitor, "id">) => this.ins<Competitor>("competitors", c);
   listCompetitors = (organizationId: string) =>
     this.many<Competitor>(this.db.from("competitors").select().eq("organization_id", organizationId));
+  getCompetitor = (id: string) => this.byId<Competitor>("competitors", id);
+  deleteCompetitor = async (id: string) => {
+    const { error } = await this.db.from("competitors").delete().eq("id", id);
+    if (error) throw new Error(JSON.stringify(error));
+  };
 
   createScenario = (s: New<Scenario>) => this.ins<Scenario>("scenarios", s);
   getScenario = (id: string) => this.byId<Scenario>("scenarios", id);

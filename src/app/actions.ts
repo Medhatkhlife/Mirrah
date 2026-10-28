@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/db";
-import { EVENTS, emit, inngestEnabled } from "@/lib/engine/inngest";
-import { launchProbe, startFreeScan, validateScanRequest, type ScanRequest } from "@/lib/engine/scan";
+import { kickOff } from "@/lib/engine/inngest";
+import { startFreeScan, validateScanRequest, type ScanRequest } from "@/lib/engine/scan";
 import type { Sector } from "@/lib/types";
 import { SECTOR_LABELS } from "@/lib/types";
 
@@ -34,17 +34,13 @@ export async function requestFreeScan(_: ScanFormState, form: FormData): Promise
   const store = getStore();
   let token: string;
   try {
-    const { scan, probes } = await startFreeScan(store, req);
-    token = scan.reportToken;
-    if (inngestEnabled()) {
-      await emit(EVENTS.scanStarted, { scanId: scan.id });
-    } else {
-      // Demo mode: no scheduler, so draft every opening message right away for the operator.
-      for (const p of probes) await launchProbe(store, p.id);
-    }
+    const { organization, scan, probes } = await startFreeScan(store, req);
+    token = organization.accessToken;
+    await kickOff(store, scan, probes);
   } catch (e) {
     console.error(e);
     return { error: "حدث خطأ أثناء بدء الفحص. حاول مرة أخرى." };
   }
-  redirect(`/r/${token}?new=1`);
+  // The owner lands on their private dashboard; the report link inside it is the shareable one.
+  redirect(`/app/${token}?new=1`);
 }

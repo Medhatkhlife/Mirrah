@@ -25,7 +25,7 @@ async function ReportPageContent({
   const store = getStore();
   const scan = await store.getScanByToken(token);
   if (!scan) notFound();
-  const { organization, probes } = await loadScanReport(store, scan);
+  const { organization, competitor, probes } = await loadScanReport(store, scan);
   if (!organization) notFound();
   const finished = probes.filter((p) => p.probe.status === "finished").length;
   const done = scan.status === "completed";
@@ -47,7 +47,9 @@ async function ReportPageContent({
 
       <div>
         <span className="text-sm text-muted">تقرير الأشعة · {SECTOR_LABELS[organization.sector]}{organization.city ? ` · ${organization.city}` : ""}</span>
-        <h1 className="text-2xl leading-9 font-bold">هذا ما رآه زبونك في {organization.name}</h1>
+        <h1 className="text-2xl leading-9 font-bold">
+          {competitor ? `هذا ما رآه الزبون عند منافسك ${competitor.name}` : `هذا ما رآه زبونك في ${organization.name}`}
+        </h1>
       </div>
 
       <Card className="flex items-center gap-5">

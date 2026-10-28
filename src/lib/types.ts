@@ -22,6 +22,15 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   email: "البريد الإلكتروني",
 };
 
+export type Plan = "free" | "pulse" | "pulse_coach" | "full";
+
+export const PLAN_LABELS: Record<Plan, string> = {
+  free: "مجانية",
+  pulse: "النبض",
+  pulse_coach: "النبض + المدرّب",
+  full: "النظام الكامل",
+};
+
 export interface Organization {
   id: string;
   name: string;
@@ -31,7 +40,9 @@ export interface Organization {
   whatsapp: string | null;
   email: string | null;
   ownerEmail: string;
-  plan: "free" | "pulse" | "pulse_coach" | "full";
+  plan: Plan;
+  /** Secret for the owner's private dashboard link (/app/<token>). Never shown on shared reports. */
+  accessToken: string;
   createdAt: string;
 }
 

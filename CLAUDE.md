@@ -24,6 +24,10 @@ owner a scored report with evidence, and later fixes the gaps with a Claude-powe
   tasks in `/ops`; a human sends the drafted message from a real phone and pastes the reply back.
 - A business is only scanned with its owner's consent. Competitor names are visible only to the
   owning organization and never published.
+- Owners reach their dashboard with a secret link `/app/<accessToken>`. Never put the access token on
+  shareable pages (`/r/<reportToken>` is the shareable one).
+- Competitor scans: paid plans only, max 3 competitors, one single-channel probe per competitor per
+  30 days (`src/lib/engine/schedule.ts`).
 - Keep business logic in `src/lib/engine/` as plain async functions over a `Store` so it is testable
   without Next.js or Inngest.
 

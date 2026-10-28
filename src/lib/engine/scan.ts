@@ -7,7 +7,7 @@ import * as ai from "../ai";
 import { config } from "../config";
 import type { Store } from "../db/types";
 import { scanScore, speedScore, weightedScore } from "../scoring";
-import type { Channel, CriterionScore, Organization, Probe, Scan, Sector } from "../types";
+import type { Channel, Competitor, CriterionScore, Organization, Probe, Scan, Sector } from "../types";
 import { fetchSiteText } from "./site";
 
 export interface ScanRequest {
@@ -45,7 +45,9 @@ export function channelsFor(o: Pick<Organization, "whatsapp" | "website" | "emai
   return out;
 }
 
-/** Create the organization, scenario, scan and its probes. Probes start "scheduled". */
+export const newToken = (bytes = 16) => randomBytes(bytes).toString("base64url");
+
+/** Create the organization and its first (free) scan. */
 export async function startFreeScan(
   store: Store,
   req: ScanRequest,
@@ -53,7 +55,6 @@ export async function startFreeScan(
 ): Promise<{ organization: Organization; scan: Scan; probes: Probe[] }> {
   const err = validateScanRequest(req);
   if (err) throw new Error(err);
-  const now = (opts.clock ?? systemClock)();
 
   const organization = await store.createOrganization({
     name: req.name.trim(),
@@ -64,19 +65,41 @@ export async function startFreeScan(
     email: req.email,
     ownerEmail: req.ownerEmail.trim(),
     plan: "free",
+    accessToken: newToken(18),
   });
+  const { scan, probes } = await createScan(store, organization, { kind: "free" }, opts);
+  return { organization, scan, probes };
+}
 
-  const siteText = opts.siteText ?? (req.website ? await fetchSiteText(req.website) : "");
-  const s = await ai.generateScenario({ sector: req.sector, city: req.city, siteText });
-  const scenario = await store.createScenario({ sector: req.sector, ...s });
+/**
+ * Create a scan with a fresh scenario and one probe per reachable channel. Probes start
+ * "scheduled". A competitor scan sends a single probe on one channel only: one ordinary
+ * customer inquiry, never repeated pressure on a business that did not sign up.
+ */
+export async function createScan(
+  store: Store,
+  organization: Organization,
+  target: { kind: "free" | "weekly" } | { kind: "competitor"; competitor: Competitor },
+  opts: { clock?: Clock; siteText?: string } = {},
+): Promise<{ scan: Scan; probes: Probe[] }> {
+  const now = (opts.clock ?? systemClock)();
+  const contact = target.kind === "competitor" ? target.competitor : organization;
+  let channels = channelsFor(contact);
+  if (channels.length === 0) throw new Error("لا توجد قناة تواصل لهذه الجهة.");
+  if (target.kind === "competitor") channels = channels.slice(0, 1);
+
+  const website = contact.website;
+  const siteText = opts.siteText ?? (website ? await fetchSiteText(website) : "");
+  const s = await ai.generateScenario({ sector: organization.sector, city: organization.city, siteText });
+  const scenario = await store.createScenario({ sector: organization.sector, ...s });
 
   const scan = await store.createScan({
     organizationId: organization.id,
-    competitorId: null,
-    kind: "free",
+    competitorId: target.kind === "competitor" ? target.competitor.id : null,
+    kind: target.kind,
     status: "running",
     scenarioId: scenario.id,
-    reportToken: randomBytes(16).toString("base64url"),
+    reportToken: newToken(),
     score: null,
     completedAt: null,
   });
@@ -84,7 +107,7 @@ export async function startFreeScan(
   // Spread attempts over time so we see daytime and evening behaviour.
   const offsetsHours = [0, 6, 20];
   const probes: Probe[] = [];
-  for (const [i, channel] of channelsFor(organization).entries()) {
+  for (const [i, channel] of channels.entries()) {
     probes.push(
       await store.createProbe({
         scanId: scan.id,
@@ -98,7 +121,7 @@ export async function startFreeScan(
       }),
     );
   }
-  return { organization, scan, probes };
+  return { scan, probes };
 }
 
 /** Draft the opening customer message. The operator (or a channel sender) then sends it. */
@@ -237,6 +260,7 @@ export async function maybeFinalizeScan(store: Store, scanId: string, at: Date) 
 /** Everything the report page and dashboard need, in one call. */
 export async function loadScanReport(store: Store, scan: Scan) {
   const organization = await store.getOrganization(scan.organizationId);
+  const competitor = scan.competitorId ? await store.getCompetitor(scan.competitorId) : null;
   const probes = await store.listProbes(scan.id);
   const details = [];
   for (const p of probes) {
@@ -246,7 +270,7 @@ export async function loadScanReport(store: Store, scan: Scan) {
       evaluation: await store.getEvaluation(p.id),
     });
   }
-  return { organization, scan, probes: details };
+  return { organization, competitor, scan, probes: details };
 }
 
 async function mustProbe(store: Store, id: string) {

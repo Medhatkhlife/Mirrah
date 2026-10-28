@@ -12,6 +12,7 @@ import {
   recordBusinessReply,
   startFreeScan,
 } from "../src/lib/engine/scan";
+import { addCompetitor } from "../src/lib/engine/schedule";
 
 const store = new MemoryStore(path.join(process.cwd(), ".data", "db.json"));
 const t = (h: number) => new Date(Date.now() - h * 3600_000);
@@ -60,9 +61,15 @@ async function main() {
   );
   await launchProbe(store, second.probes[0].id);
 
+  // Make the first business a paying customer with one competitor, so the comparison shows.
+  const org = (await store.listOrganizations()).find((o) => o.name.startsWith("مكتب الأفق"))!;
+  await store.updateOrganization(org.id, { plan: "pulse" });
+  await addCompetitor(store, org.id, { name: "عقارات النخبة (تجريبي)", website: null, whatsapp: "+970591111111", email: null });
+
   const done = await store.getScan(scan.id);
   console.log(`Demo ready. Completed scan score: ${done?.score}`);
   console.log(`Report: /r/${scan.reportToken}`);
+  console.log(`Owner dashboard: /app/${org.accessToken}`);
   console.log(`Running scan report: /r/${second.scan.reportToken}`);
 }
 

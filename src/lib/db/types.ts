@@ -14,10 +14,14 @@ export type New<T> = Omit<T, "id" | "createdAt">;
 export interface Store {
   createOrganization(o: New<Organization>): Promise<Organization>;
   getOrganization(id: string): Promise<Organization | null>;
+  getOrganizationByToken(token: string): Promise<Organization | null>;
+  updateOrganization(id: string, patch: Partial<Organization>): Promise<Organization>;
   listOrganizations(): Promise<Organization[]>;
 
   createCompetitor(c: Omit<Competitor, "id">): Promise<Competitor>;
   listCompetitors(organizationId: string): Promise<Competitor[]>;
+  getCompetitor(id: string): Promise<Competitor | null>;
+  deleteCompetitor(id: string): Promise<void>;
 
   createScenario(s: New<Scenario>): Promise<Scenario>;
   getScenario(id: string): Promise<Scenario | null>;
