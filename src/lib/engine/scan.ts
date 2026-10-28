@@ -9,6 +9,7 @@ import type { Store } from "../db/types";
 import { scanScore, speedScore, weightedScore } from "../scoring";
 import type { Channel, Competitor, CriterionScore, Organization, Probe, Scan, Sector } from "../types";
 import { fetchSiteText } from "./site";
+import { sendReportReady } from "../notify";
 
 export interface ScanRequest {
   name: string;
@@ -245,16 +246,24 @@ export async function finishProbe(store: Store, probeId: string, at: Date) {
 export async function maybeFinalizeScan(store: Store, scanId: string, at: Date) {
   const probes = await store.listProbes(scanId);
   if (probes.length === 0 || probes.some((p) => p.status !== "finished")) return null;
+  const current = await store.getScan(scanId);
+  if (!current || current.status === "completed") return current;
   const scores: number[] = [];
   for (const p of probes) {
     const e = await store.getEvaluation(p.id);
     if (e) scores.push(e.score);
   }
-  return store.updateScan(scanId, {
+  const scan = await store.updateScan(scanId, {
     status: "completed",
     score: scanScore(scores),
     completedAt: at.toISOString(),
   });
+  // Tell the owner about their own scans; competitor results simply appear in the dashboard.
+  if (scan.kind !== "competitor") {
+    const org = await store.getOrganization(scan.organizationId);
+    if (org) await sendReportReady(org, scan);
+  }
+  return scan;
 }
 
 /** Everything the report page and dashboard need, in one call. */

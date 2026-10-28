@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/db";
 import { EVENTS, emit, kickOff } from "@/lib/engine/inngest";
+import { autoSendDraft } from "@/lib/engine/dispatch";
 import { addCompetitor, removeCompetitor, runRecurringCycle } from "@/lib/engine/schedule";
 import { PLAN_LABELS, type Plan } from "@/lib/types";
 import { closeWithoutReply, markDraftSent, recordBusinessReply } from "@/lib/engine/scan";
@@ -35,6 +36,7 @@ export async function submitReply(form: FormData) {
   const before = await store.getProbe(probeId);
   await recordBusinessReply(store, probeId, body, new Date(Date.now() - minutesAgo * 60_000));
   if (before) await emit(EVENTS.probeReplied, { probeId, round: before.round });
+  await autoSendDraft(store, probeId);
   revalidatePath("/ops");
 }
 

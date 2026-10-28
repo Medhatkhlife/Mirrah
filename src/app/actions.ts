@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/db";
 import { kickOff } from "@/lib/engine/inngest";
+import { sendOwnerWelcome } from "@/lib/notify";
 import { startFreeScan, validateScanRequest, type ScanRequest } from "@/lib/engine/scan";
 import type { Sector } from "@/lib/types";
 import { SECTOR_LABELS } from "@/lib/types";
@@ -37,6 +38,7 @@ export async function requestFreeScan(_: ScanFormState, form: FormData): Promise
     const { organization, scan, probes } = await startFreeScan(store, req);
     token = organization.accessToken;
     await kickOff(store, scan, probes);
+    await sendOwnerWelcome(organization);
   } catch (e) {
     console.error(e);
     return { error: "حدث خطأ أثناء بدء الفحص. حاول مرة أخرى." };
